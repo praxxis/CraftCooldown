@@ -1,0 +1,6 @@
+## Interface: 11302
+## Title: CraftCooldown
+## Notes: Displayes Cooldowns for opened TradeSkill
+## Author: Czupak
+## Version 0.1
+CraftCooldown.xml
