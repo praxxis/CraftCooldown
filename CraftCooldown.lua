@@ -112,6 +112,8 @@ function frame:OnEvent(event, arg1)
 		then
 			printSkills()
 			flag = false
+		else
+			refreshSkills()
 		end
 	end
 end
@@ -154,7 +156,8 @@ function checkVersion()
 	-- print(version)
 end
 
-function printSkills()
+function refreshSkills()
+	local skills = {}
 	for a=0, GetNumTradeSkills(), 1
 	do
 		skillName, skillType, numAvailable, isExpanded, altVerb, numSkillUps = GetTradeSkillInfo(a);
@@ -165,9 +168,17 @@ function printSkills()
 			cache['crafts'][skillName] = time() + seconds
 			if cache['config']['onOpen']
 			then
-				printSkill(skillName, seconds)
+				table.insert(skills, {skillName, seconds})
 			end
 		end
+	end
+	return skills
+end
+
+function printSkills()
+	for _, row in pairs(refreshSkills())
+	do
+		printSkill(row[1], row[2])
 	end
 end
 
