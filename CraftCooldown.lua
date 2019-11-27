@@ -99,10 +99,17 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("TRADE_SKILL_SHOW")
 frame:RegisterEvent("TRADE_SKILL_UPDATE")
 frame:RegisterEvent("PLAYER_LOGIN")
+frame:RegisterEvent("BAG_UPDATE_COOLDOWN")
+frame:RegisterEvent("BAG_UPDATE")
+frame:RegisterEvent("BAG_OPEN")
+
 function frame:OnEvent(event, arg1)
 	if event == "ADDON_LOADED"
 	then
 		init()
+	elseif event == 'BAG_UPDATE' or event == 'BAG_UPDATE_COOLDOWN' or event == 'BAG_OPEN'
+	then
+		refreshItems()
 	elseif event == 'TRADE_SKILL_SHOW'
 	then
 		flag = true
@@ -173,6 +180,30 @@ function refreshSkills()
 		end
 	end
 	return skills
+end
+
+function refreshItems()
+	for bag = 0, 4
+	do
+		for slot = 1, GetContainerNumSlots(bag)
+		do
+			local item = GetContainerItemLink(bag, slot);
+			if item ~= nil
+			then
+				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(item);
+				if sName == "Salt Shaker" or sName == "Second Wind"
+				then
+					local startTime, duration, isEnabled = GetContainerItemCooldown(bag, slot);
+					local readyAt = startTime + duration - GetTime() + time()
+					if cache['crafts'][sName] == nil
+					then
+						print(format("%s Added [%s]", prefix, sName))
+					end
+					cache['crafts'][sName] = readyAt
+				end	
+			end
+		end
+	end
 end
 
 function printSkills()
