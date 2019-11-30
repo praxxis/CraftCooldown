@@ -3,5 +3,5 @@
 ## Notes: TradeSkills Cooldown Tracker
 ## Author: Czupak
 ## SavedVariablesPerCharacter: cache
-## Version: 0.4
+## Version: 0.5
 CraftCooldown.lua

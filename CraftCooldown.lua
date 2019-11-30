@@ -140,7 +140,7 @@ function refreshItems()
 			if item ~= nil
 			then
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(item);
-				if sName == "Salt Shaker" or sName == "Second Wind"
+				if sName == "Salt Shaker" -- or sName == "Second Wind"
 				then
 					local startTime, duration, isEnabled = GetContainerItemCooldown(bag, slot);
 					local readyAt = startTime + duration - GetTime() + time()
