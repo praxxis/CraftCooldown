@@ -37,57 +37,6 @@ frame:SetScript("OnShow", function(frame)
 	printOnLogin:SetChecked(cache['config']['onLogin'])
 	printOnLogin:SetPoint("TOPLEFT", printOnOpen, "BOTTOMLEFT", 0, -8)
 
-	-- local info = {}
-	-- local fontSizeDropdown = CreateFrame("Frame", "BugSackFontSize", frame, "UIDropDownMenuTemplate")
-	-- fontSizeDropdown:SetPoint("TOPLEFT", mute, "BOTTOMLEFT", -15, -10)
-	-- fontSizeDropdown.initialize = function()
-	-- 	wipe(info)
-	-- 	local fonts = {"GameFontHighlightSmall", "GameFontHighlight", "GameFontHighlightMedium", "GameFontHighlightLarge"}
-	-- 	local names = {L["Small"], L["Medium"], L["Large"], L["X-Large"]}
-	-- 	for i, font in next, fonts do
-	-- 		info.text = names[i]
-	-- 		info.value = font
-	-- 		info.func = function(self)
-	-- 			addon.db.fontSize = self.value
-	-- 			if _G.BugSackFrameScrollText then
-	-- 				_G.BugSackFrameScrollText:SetFontObject(_G[self.value])
-	-- 			end
-	-- 			BugSackFontSizeText:SetText(self:GetText())
-	-- 		end
-	-- 		info.checked = font == addon.db.fontSize
-	-- 		UIDropDownMenu_AddButton(info)
-	-- 	end
-	-- end
-	-- BugSackFontSizeText:SetText(L["Font size"])
-
-	-- local dropdown = CreateFrame("Frame", "BugSackSoundDropdown", frame, "UIDropDownMenuTemplate")
-	-- dropdown:SetPoint("LEFT", fontSizeDropdown, "RIGHT", 150, 0)
-	-- dropdown.initialize = function()
-	-- 	wipe(info)
-	-- 	for _, sound in next, LibStub("LibSharedMedia-3.0"):List("sound") do
-	-- 		info.text = sound
-	-- 		info.value = sound
-	-- 		info.func = function(self)
-	-- 			addon.db.soundMedia = self.value
-	-- 			BugSackSoundDropdownText:SetText(self:GetText())
-	-- 		end
-	-- 		info.checked = sound == addon.db.soundMedia
-	-- 		UIDropDownMenu_AddButton(info)
-	-- 	end
-	-- end
-	-- BugSackSoundDropdownText:SetText(L["Sound"])
-
-	-- local clear = CreateFrame("Button", "BugSackSaveButton", frame, "UIPanelButtonTemplate")
-	-- clear:SetText(L["Wipe saved bugs"])
-	-- clear:SetWidth(177)
-	-- clear:SetHeight(24)
-	-- clear:SetPoint("TOPLEFT", fontSizeDropdown, "BOTTOMLEFT", 17, -25)
-	-- clear:SetScript("OnClick", function()
-	-- 	addon:Reset()
-	-- end)
-	-- clear.tooltipText = L["Wipe saved bugs"]
-	-- clear.newbieText = L.wipeDesc
-
 	frame:SetScript("OnShow", nil)
 end)
 
@@ -152,7 +101,7 @@ function init()
 	end
 end
 
-function checkVersion()
+-- function checkVersion()
 	-- local version = GetAddOnMetadata(addonName, "version")
 	-- if (cache['version'] == nil) or (version ~= cache['version'])
 	-- then
@@ -161,7 +110,7 @@ function checkVersion()
 	-- 	print(format("%s %s loaded.", prefix, version))
 	-- end
 	-- print(version)
-end
+-- end
 
 function refreshSkills()
 	local skills = {}
@@ -225,13 +174,15 @@ end
 
 function getGradient(seconds)
 	local grad = {
-		[0] = "|cff15ff00", -- READY
-		[2 * 60 * 60] = "|cff00FF96", -- 7200
-		[8 * 60 * 60] = "|cffFFF569", -- 14400
-		-- [18 * 60 * 60] = "|cffffffff",
-		[24 * 60 * 60] = "|cffFF7D0A", -- 86400
-		[48 * 60 * 60] = "|cffC41F3B", -- 172800
-		[99 * 60 * 60] = "|cff19180a",
+		[0] = "|cff00ffff", -- READY
+		[1 * 60 * 60] = "|cff7cfc00",
+		[2 * 60 * 60] = "|cff32cd32",
+		[4 * 60 * 60] = "|cff228b22",
+		[8 * 60 * 60] = "|cff006400",
+		[12 * 60 * 60] = "|cffffd700",
+		[24 * 60 * 60] = "|cffff8c00",
+		[48 * 60 * 60] = "|cffff0000",
+		[99 * 60 * 60] = "|cff8b0000",
 	}
 	local keys = {}
 	for t,c in pairs(grad)
@@ -243,7 +194,6 @@ function getGradient(seconds)
 	do
 		if seconds < t
 		then 
-			-- print(tostring(seconds) .. "s = " .. tostring(t) .. 'v' .. grad[t] .. 'xxxx|r')
 			return grad[t]
 		end
 	end
