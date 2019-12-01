@@ -37,6 +37,35 @@ frame:SetScript("OnShow", function(frame)
 	printOnLogin:SetChecked(cache['config']['onLogin'])
 	printOnLogin:SetPoint("TOPLEFT", printOnOpen, "BOTTOMLEFT", 0, -8)
 
+	local label = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	label:SetPoint("TOPLEFT", 6, -16)
+	label:SetText('Ignored Cooldowns')
+	label:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 0, -8)
+
+	-- DropDown
+	local dropdown = CreateFrame("Frame", "CCDIgnored", frame, "UIDropDownMenuTemplate")
+	dropdown:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -8)
+	dropdown.initialize = function()
+		local dd = {}
+		for _, entry in pairs(sortHash(cache['crafts']))
+		do
+			dd.text = entry['name']
+			dd.value = entry['name']
+			dd.func = function(self)
+				toggleIgnoreCooldown(self.value)
+				self.checked = isCooldownIgnored(self.value)
+				CCDIgnoredString:SetText(getIgnoredString())
+			end
+			dd.checked = isCooldownIgnored(entry['name'])
+			UIDropDownMenu_AddButton(dd)
+		end
+	end
+
+	local ignored = frame:CreateFontString('CCDIgnoredString', "ARTWORK", "GameFontNormalSmall")
+	ignored:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 8, -8)
+	ignored:SetText(getIgnoredString())
+	ignored:SetJustifyH("LEFT")
+
 	frame:SetScript("OnShow", nil)
 end)
 
@@ -91,8 +120,13 @@ function init()
 				['onLogin'] = true,
 				['onOpen'] = true,
 			},
+			ignored = {},
 			version = '0'
 		}
+	end
+	if cache['ignored'] == nil
+	then
+		cache['ignored'] = {}
 	end
 	-- checkVersion()
 	if cache['config']['onLogin']
@@ -101,6 +135,41 @@ function init()
 	end
 end
 
+function toggleIgnoreCooldown(cooldown)
+	if isCooldownIgnored(cooldown)
+	then
+		unIgnoreCooldown(cooldown)
+	else
+		ignoreCooldown(cooldown)
+	end
+end
+
+function ignoreCooldown(cooldown)
+	cache['ignored'][cooldown] = true
+end
+
+function unIgnoreCooldown(cooldown)
+	cache['ignored'][cooldown] = nil
+end
+
+function isCooldownIgnored(cooldown)
+	if cache['ignored'][cooldown] == nil
+	then
+		return false
+	else
+		return cache['ignored'][cooldown]
+	end
+end
+
+function getIgnoredString()
+	local ignoredArr = {}
+	for key, val in pairs(cache['ignored'])
+	do
+		table.insert(ignoredArr, key)
+	end
+
+	return table.concat(ignoredArr, "\n")
+end
 -- function checkVersion()
 	-- local version = GetAddOnMetadata(addonName, "version")
 	-- if (cache['version'] == nil) or (version ~= cache['version'])
@@ -164,6 +233,10 @@ end
 
 function printSkill(skillName, seconds)
 	local gradient = getGradient(seconds)
+	if isCooldownIgnored(skillName)
+	then
+		return
+	end
 	if seconds < 0
 	then
 		print(format("%s%s%s !READY! |r[%s%s|r]", prefix, gradient, skillName, gradient, disp_time(seconds*-1)))
