@@ -66,6 +66,35 @@ frame:SetScript("OnShow", function(frame)
 	ignored:SetText(getIgnoredString())
 	ignored:SetJustifyH("LEFT")
 
+	-- Global Ignore
+	local labelGlobal = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	labelGlobal:SetPoint("TOPLEFT", 6, -16)
+	labelGlobal:SetText('Ignored Global Cooldowns')
+	labelGlobal:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 200, -8)
+
+	local dropdownGlobal = CreateFrame("Frame", "CCDGlobalIgnored", frame, "UIDropDownMenuTemplate")
+	dropdownGlobal:SetPoint("TOPLEFT", labelGlobal, "BOTTOMLEFT", 0, -8)
+	dropdownGlobal.initialize = function()
+		local dd = {}
+		for _, entry in pairs(sortHash(getGlobalCooldowns()))
+		do
+			dd.text = entry['name']
+			dd.value = entry['name']
+			dd.func = function(self)
+				toggleIgnoreGlobalCooldown(self.value)
+				self.checked = isGlobalCooldownIgnored(self.value)
+				CCDGlobalIgnoredString:SetText(getGlobalIgnoredString())
+			end
+			dd.checked = isGlobalCooldownIgnored(entry['name'])
+			UIDropDownMenu_AddButton(dd)
+		end
+	end
+
+	local ignoredGlobal = frame:CreateFontString('CCDGlobalIgnoredString', "ARTWORK", "GameFontNormalSmall")
+	ignoredGlobal:SetPoint("TOPLEFT", dropdownGlobal, "BOTTOMLEFT", 8, -8)
+	ignoredGlobal:SetText(getGlobalIgnoredString())
+	ignoredGlobal:SetJustifyH("LEFT")
+
 	frame:SetScript("OnShow", nil)
 end)
 
@@ -106,12 +135,19 @@ frame:SetScript("OnEvent", frame.OnEvent);
 
 SLASH_CRAFTCOOLDOWN1 = '/ccd'
 function SlashCmdList.CRAFTCOOLDOWN(msg)
-	InterfaceOptionsFrame_OpenToCategory(addonName)
-	InterfaceOptionsFrame_OpenToCategory(addonName)
+	if msg ~= nil and msg ~= ""
+	then 
+		if msg == 'demo'
+		then
+			demo()
+		end
+	else -- TODO print /ccd params
+		InterfaceOptionsFrame_OpenToCategory(addonName)
+		InterfaceOptionsFrame_OpenToCategory(addonName)
+	end
 end
 
 function init()
-
 	if cache == nil
 	then
 		cache = {
@@ -121,6 +157,7 @@ function init()
 				['onOpen'] = true,
 			},
 			ignored = {},
+			globalIgnored = {},
 			version = '0'
 		}
 	end
@@ -128,6 +165,31 @@ function init()
 	then
 		cache['ignored'] = {}
 	end
+	if cache['globalIgnored'] == nil
+	then
+		cache['globalIgnored'] = {}
+	end
+
+	local name = UnitName("player")
+	local realm = GetRealmName("player")
+	if globalCache == nil
+	then
+		print('Init global')
+		globalCache = {
+			crafts = {}
+		}
+	end
+	if globalCache['crafts'][realm] == nil
+	then
+		print('Init global realm')
+		globalCache['crafts'][realm] = {}
+	end
+	if globalCache['crafts'][realm][name] == nil
+	then
+		print('Init global realm char')
+		globalCache['crafts'][realm][name] = {}
+	end
+
 	-- checkVersion()
 	if cache['config']['onLogin']
 	then
@@ -144,12 +206,29 @@ function toggleIgnoreCooldown(cooldown)
 	end
 end
 
+function toggleIgnoreGlobalCooldown(cooldown)
+	if isGlobalCooldownIgnored(cooldown)
+	then
+		unIgnoreGlobalCooldown(cooldown)
+	else
+		ignoreGlobalCooldown(cooldown)
+	end
+end
+
 function ignoreCooldown(cooldown)
 	cache['ignored'][cooldown] = true
 end
 
 function unIgnoreCooldown(cooldown)
 	cache['ignored'][cooldown] = nil
+end
+
+function ignoreGlobalCooldown(cooldown)
+	cache['globalIgnored'][cooldown] = true
+end
+
+function unIgnoreGlobalCooldown(cooldown)
+	cache['globalIgnored'][cooldown] = nil
 end
 
 function isCooldownIgnored(cooldown)
@@ -161,9 +240,28 @@ function isCooldownIgnored(cooldown)
 	end
 end
 
+function isGlobalCooldownIgnored(cooldown)
+	if cache['globalIgnored'][cooldown] == nil
+	then
+		return false
+	else
+		return cache['globalIgnored'][cooldown]
+	end
+end
+
 function getIgnoredString()
 	local ignoredArr = {}
 	for key, val in pairs(cache['ignored'])
+	do
+		table.insert(ignoredArr, key)
+	end
+
+	return table.concat(ignoredArr, "\n")
+end
+
+function getGlobalIgnoredString()
+	local ignoredArr = {}
+	for key, val in pairs(cache['globalIgnored'])
 	do
 		table.insert(ignoredArr, key)
 	end
@@ -190,7 +288,8 @@ function refreshSkills()
 		if seconds and seconds > 0
 		then
 			-- cooldown = seconds / 60 / 60
-			cache['crafts'][skillName] = time() + seconds
+			-- cache['crafts'][skillName] = time() + seconds
+			cacheCooldown(skillName, time() + seconds)
 			if cache['config']['onOpen']
 			then
 				table.insert(skills, {skillName, seconds})
@@ -198,6 +297,13 @@ function refreshSkills()
 		end
 	end
 	return skills
+end
+
+function cacheCooldown(cooldown, readyAt)
+	cache['crafts'][cooldown] = readyAt
+	local name = UnitName("player")
+	local realm = GetRealmName("player")
+	globalCache['crafts'][realm][name][cooldown] = readyAt
 end
 
 function refreshItems()
@@ -217,7 +323,8 @@ function refreshItems()
 					then
 						print(format("%s Added [%s]", prefix, sName))
 					end
-					cache['crafts'][sName] = readyAt
+					cacheCooldown(sName, readyAt)
+					-- cache['crafts'][sName] = readyAt
 				end	
 			end
 		end
@@ -231,9 +338,28 @@ function printSkills()
 	end
 end
 
+function demo()
+	local matrix = {
+		{ 0, "READY"}, -- READY
+		{ 1 * 60 * 60, "0-1h"},
+		{ 2 * 60 * 60, "1-2h"},
+		{ 4 * 60 * 60, "2-4h"},
+		{ 8 * 60 * 60, "4-8h"},
+		{ 12 * 60 * 60, "8-12h"},
+		{ 24 * 60 * 60, "12-24h"},
+		{ 48 * 60 * 60, "24-48h"},
+		{ 99 * 60 * 60, "48h+"}
+	}
+	for _, row in pairs(matrix)
+	do
+		local t, s = row[1], row[2]
+		printSkill(s, t-60)
+	end
+end
+
 function printSkill(skillName, seconds)
 	local gradient = getGradient(seconds)
-	if isCooldownIgnored(skillName)
+	if isCooldownIgnored(skillName) or isGlobalCooldownIgnored(skillName)
 	then
 		return
 	end
@@ -270,7 +396,7 @@ function getGradient(seconds)
 			return grad[t]
 		end
 	end
-	print("This should not have happened!")
+	return grad[99 * 60 * 60]
 end
 
 
@@ -290,6 +416,34 @@ function printCached()
 		readyAt = seconds - time()
 		printSkill(skillName, readyAt)
 	end
+
+	for _, entry in pairs(sortHash(getGlobalCooldowns()))
+	do
+		skillName = entry['name']
+		seconds = entry['seconds']
+		readyAt = seconds - time()
+		printSkill(skillName, readyAt)
+	end
+end
+
+function getGlobalCooldowns(includeCurrentCharacter)
+	local cName = UnitName("player")
+	local cRealm = GetRealmName("player")
+	local data = {}
+	for realm, realms in pairs(globalCache['crafts'])
+	do
+		for char, chars in pairs(realms)
+		do
+			for cooldown, seconds in pairs(chars)
+			do
+				if not (cName == char and cRealm == realm and not includeCurrentCharacter)
+				then
+					data[ format("(%s-%s) %s", char, realm, cooldown) ] = seconds
+				end
+			end
+		end
+	end
+	return data
 end
 
 function sortHash(hash)
