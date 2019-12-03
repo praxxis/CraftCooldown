@@ -109,6 +109,9 @@ frame:RegisterEvent("PLAYER_LOGIN")
 frame:RegisterEvent("BAG_UPDATE_COOLDOWN")
 frame:RegisterEvent("BAG_UPDATE")
 frame:RegisterEvent("BAG_OPEN")
+frame:RegisterEvent("ITEM_TEXT_BEGIN")
+frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+
 
 function frame:OnEvent(event, arg1)
 	if event == "ADDON_LOADED"
@@ -116,7 +119,9 @@ function frame:OnEvent(event, arg1)
 		init()
 	elseif event == 'BAG_UPDATE' or event == 'BAG_UPDATE_COOLDOWN' or event == 'BAG_OPEN'
 	then
-		refreshItems()
+		-- print(event)
+		-- scanItemTooltip()
+		-- refreshItems()
 	elseif event == 'TRADE_SKILL_SHOW'
 	then
 		flag = true
@@ -127,8 +132,12 @@ function frame:OnEvent(event, arg1)
 			printSkills()
 			flag = false
 		else
-			refreshSkills()
+			-- refreshSkills()
 		end
+	elseif event == 'UNIT_INVENTORY_CHANGED'
+	then
+		-- print(event)
+		scanItemTooltip()
 	end
 end
 frame:SetScript("OnEvent", frame.OnEvent);
@@ -140,6 +149,9 @@ function SlashCmdList.CRAFTCOOLDOWN(msg)
 		if msg == 'demo'
 		then
 			demo()
+		elseif msg == 'tt'
+		then
+			scanItemTooltip()
 		end
 	else -- TODO print /ccd params
 		InterfaceOptionsFrame_OpenToCategory(addonName)
@@ -279,6 +291,40 @@ end
 	-- print(version)
 -- end
 
+function scanItemTooltip()
+	if GameTooltipTextLeft1:GetText() == "Salt Shaker" or GameTooltipTextLeft1:GetText() == "Second Wind" or GameTooltipTextLeft1:GetText() == "Elixir of Ogre's Strength"
+	then
+		local matrix = {["Sec"] = 1, ["Min"] = 60, ["Hr"] = 3600, ["Day"] = 86400}
+		for i=2, GameTooltip:NumLines()
+		do
+			local line = _G["GameTooltipTextLeft"..i];
+			if not line then
+				break;
+			end
+			local text = line:GetText();
+			local f = string.find(text, "Cooldown remaining: ")
+			if f then
+				-- print(text)
+				local seconds = 0
+				for key, s in pairs(matrix)
+				do
+					local pat = "(%d+) " .. key .. "s?"
+					local val = string.match(text, pat)
+					if val
+					then
+						seconds = seconds + val * s
+					end
+				end
+				cacheCooldown(skillName, time() + seconds)
+				printSkill(GameTooltipTextLeft1:GetText(), seconds)
+				-- printCached()
+				return
+			end
+		end
+	end
+end
+
+
 function refreshSkills()
 	local skills = {}
 	for a=0, GetNumTradeSkills(), 1
@@ -315,7 +361,7 @@ function refreshItems()
 			if item ~= nil
 			then
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(item);
-				if sName == "Salt Shaker" -- or sName == "Second Wind"
+				if sName == "Salt Shaker" or sName == "Second Wind"
 				then
 					local startTime, duration, isEnabled = GetContainerItemCooldown(bag, slot);
 					local readyAt = startTime + duration - GetTime() + time()
