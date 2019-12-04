@@ -37,10 +37,17 @@ frame:SetScript("OnShow", function(frame)
 	printOnLogin:SetChecked(cache['config']['onLogin'])
 	printOnLogin:SetPoint("TOPLEFT", printOnOpen, "BOTTOMLEFT", 0, -8)
 
+	local useItemTooltip = newCheckbox(
+		"Alternative way for getting Salt Shaker cooldown",
+		"This method scans Salt Shaker's tooltip looking for cooldown. Use if the cooldown seems abnormal (like 50 days).\nIt will scan the tooltip when you activate the cooldown. You can activate scan on demand by typing '/ccd tt' while hovering over Salt Shaker.",
+		function(self, value) cache['config']['useItemTooltip'] = value end)
+	useItemTooltip:SetChecked(cache['config']['useItemTooltip'])
+	useItemTooltip:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 0, -8)
+
 	local label = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	label:SetPoint("TOPLEFT", 6, -16)
 	label:SetText('Ignored Cooldowns')
-	label:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 0, -8)
+	label:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 0, -8)
 
 	-- DropDown
 	local dropdown = CreateFrame("Frame", "CCDIgnored", frame, "UIDropDownMenuTemplate")
@@ -70,7 +77,7 @@ frame:SetScript("OnShow", function(frame)
 	local labelGlobal = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	labelGlobal:SetPoint("TOPLEFT", 6, -16)
 	labelGlobal:SetText('Ignored Global Cooldowns')
-	labelGlobal:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 200, -8)
+	labelGlobal:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 200, -8)
 
 	local dropdownGlobal = CreateFrame("Frame", "CCDGlobalIgnored", frame, "UIDropDownMenuTemplate")
 	dropdownGlobal:SetPoint("TOPLEFT", labelGlobal, "BOTTOMLEFT", 0, -8)
@@ -120,8 +127,11 @@ function frame:OnEvent(event, arg1)
 	elseif event == 'BAG_UPDATE' or event == 'BAG_UPDATE_COOLDOWN' or event == 'BAG_OPEN'
 	then
 		-- print(event)
+		if not cache['config']['useItemTooltip']
+		then
+			refreshItems()
+		end
 		-- scanItemTooltip()
-		-- refreshItems()
 	elseif event == 'TRADE_SKILL_SHOW'
 	then
 		flag = true
@@ -136,8 +146,10 @@ function frame:OnEvent(event, arg1)
 		end
 	elseif event == 'UNIT_INVENTORY_CHANGED'
 	then
-		-- print(event)
-		scanItemTooltip()
+		if cache['config']['useItemTooltip']
+		then
+			scanItemTooltip()
+		end
 	end
 end
 frame:SetScript("OnEvent", frame.OnEvent);
@@ -152,6 +164,16 @@ function SlashCmdList.CRAFTCOOLDOWN(msg)
 		elseif msg == 'tt'
 		then
 			scanItemTooltip()
+		elseif msg == 'p'
+		then
+			printCached()
+		elseif msg == 'help'
+		then
+			print(format("%s%s", prefix, " /ccd - options"))
+			print(format("%s%s", prefix, " /ccd demo - color scheme demo"))
+			print(format("%s%s", prefix, " /ccd help - help"))
+			print(format("%s%s", prefix, " /ccd p - print cooldowns"))
+			print(format("%s%s", prefix, " /ccd tt - scans Salt Shaker tooltip for cooldown"))
 		end
 	else -- TODO print /ccd params
 		InterfaceOptionsFrame_OpenToCategory(addonName)
@@ -167,6 +189,7 @@ function init()
 			config = {
 				['onLogin'] = true,
 				['onOpen'] = true,
+				['useItemTooltip'] = false,
 			},
 			ignored = {},
 			globalIgnored = {},
@@ -180,6 +203,14 @@ function init()
 	if cache['globalIgnored'] == nil
 	then
 		cache['globalIgnored'] = {}
+	end
+	if cache['config'] == nil
+	then
+		cache['config'] = {}
+	end
+	if cache['config']['useItemTooltip'] == nil
+	then
+		cache['config']['useItemTooltip'] = false
 	end
 
 	local name = UnitName("player")
@@ -292,7 +323,7 @@ end
 -- end
 
 function scanItemTooltip()
-	if GameTooltipTextLeft1:GetText() == "Salt Shaker" or GameTooltipTextLeft1:GetText() == "Second Wind" or GameTooltipTextLeft1:GetText() == "Elixir of Ogre's Strength"
+	if GameTooltipTextLeft1:GetText() == "Salt Shaker"-- or GameTooltipTextLeft1:GetText() == "Second Wind" or GameTooltipTextLeft1:GetText() == "Elixir of Ogre's Strength"
 	then
 		local matrix = {["Sec"] = 1, ["Min"] = 60, ["Hr"] = 3600, ["Day"] = 86400}
 		for i=2, GameTooltip:NumLines()
@@ -361,7 +392,7 @@ function refreshItems()
 			if item ~= nil
 			then
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(item);
-				if sName == "Salt Shaker" or sName == "Second Wind"
+				if sName == "Salt Shaker" --or sName == "Second Wind"
 				then
 					local startTime, duration, isEnabled = GetContainerItemCooldown(bag, slot);
 					local readyAt = startTime + duration - GetTime() + time()
