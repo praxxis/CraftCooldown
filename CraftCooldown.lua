@@ -1,13 +1,13 @@
 local prefix = "|cff1784d1C|cffffa500CD|r: "
 local flag = false
-
+local delay = 0
 local addonName = 'CraftCooldown'
-local frame = CreateFrame("FRAME")
-frame.name = addonName
-frame:Hide()
-frame:SetScript("OnShow", function(frame)
+local optionsFrame = CreateFrame("FRAME")
+optionsFrame.name = addonName
+optionsFrame:Hide()
+optionsFrame:SetScript("OnShow", function(optionsFrame)
 	local function newCheckbox(label, description, onClick)
-		local check = CreateFrame("CheckButton", "CCDCheck" .. label, frame, "InterfaceOptionsCheckButtonTemplate")
+		local check = CreateFrame("CheckButton", "CCDCheck" .. label, optionsFrame, "InterfaceOptionsCheckButtonTemplate")
 		check:SetScript("OnClick", function(self)
 			local tick = self:GetChecked()
 			onClick(self, tick and true or false)
@@ -19,7 +19,7 @@ frame:SetScript("OnShow", function(frame)
 		return check
 	end
 
-	local title = frame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+	local title = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", 16, -16)
 	title:SetText(addonName)
 
@@ -37,20 +37,35 @@ frame:SetScript("OnShow", function(frame)
 	printOnLogin:SetChecked(cache['config']['onLogin'])
 	printOnLogin:SetPoint("TOPLEFT", printOnOpen, "BOTTOMLEFT", 0, -8)
 
+	local printOnReady = newCheckbox(
+		"Print cooldowns when ready",
+		"",
+		function(self, value) cache['config']['onReady'] = value end)
+	printOnReady:SetChecked(cache['config']['onReady'])
+	printOnReady:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 0, -8)
+
+	-- local includeTimeSinceReady = newCheckbox(
+	-- 	"Include time since ready",
+	-- 	"",
+	-- 	function(self, value) cache['config']['includeTimeSinceReady'] = value end)
+	-- includeTimeSinceReady:SetChecked(cache['config']['includeTimeSinceReady'])
+	-- includeTimeSinceReady:SetPoint("TOPLEFT", printOnReady, "BOTTOMLEFT", 15, -8)
+
 	local useItemTooltip = newCheckbox(
 		"Alternative way for getting Salt Shaker cooldown",
 		"This method scans Salt Shaker's tooltip looking for cooldown. Use if the cooldown seems abnormal (like 50 days).\nIt will scan the tooltip when you activate the cooldown. You can activate scan on demand by typing '/ccd tt' while hovering over Salt Shaker.",
 		function(self, value) cache['config']['useItemTooltip'] = value end)
 	useItemTooltip:SetChecked(cache['config']['useItemTooltip'])
-	useItemTooltip:SetPoint("TOPLEFT", printOnLogin, "BOTTOMLEFT", 0, -8)
+	-- useItemTooltip:SetPoint("TOPLEFT", includeTimeSinceReady, "BOTTOMLEFT", -15, -8)
+	useItemTooltip:SetPoint("TOPLEFT", printOnReady, "BOTTOMLEFT", 0, -8)
 
-	local label = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	local label = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	label:SetPoint("TOPLEFT", 6, -16)
 	label:SetText('Ignored Cooldowns')
 	label:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 0, -8)
 
 	-- DropDown
-	local dropdown = CreateFrame("Frame", "CCDIgnored", frame, "UIDropDownMenuTemplate")
+	local dropdown = CreateFrame("Frame", "CCDIgnored", optionsFrame, "UIDropDownMenuTemplate")
 	dropdown:SetPoint("TOPLEFT", label, "BOTTOMLEFT", 0, -8)
 	dropdown.initialize = function()
 		local dd = {}
@@ -68,18 +83,18 @@ frame:SetScript("OnShow", function(frame)
 		end
 	end
 
-	local ignored = frame:CreateFontString('CCDIgnoredString', "ARTWORK", "GameFontNormalSmall")
+	local ignored = optionsFrame:CreateFontString('CCDIgnoredString', "ARTWORK", "GameFontNormalSmall")
 	ignored:SetPoint("TOPLEFT", dropdown, "BOTTOMLEFT", 8, -8)
 	ignored:SetText(getIgnoredString())
 	ignored:SetJustifyH("LEFT")
 
 	-- Global Ignore
-	local labelGlobal = frame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	local labelGlobal = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	labelGlobal:SetPoint("TOPLEFT", 6, -16)
 	labelGlobal:SetText('Ignored Global Cooldowns')
 	labelGlobal:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 200, -8)
 
-	local dropdownGlobal = CreateFrame("Frame", "CCDGlobalIgnored", frame, "UIDropDownMenuTemplate")
+	local dropdownGlobal = CreateFrame("Frame", "CCDGlobalIgnored", optionsFrame, "UIDropDownMenuTemplate")
 	dropdownGlobal:SetPoint("TOPLEFT", labelGlobal, "BOTTOMLEFT", 0, -8)
 	dropdownGlobal.initialize = function()
 		local dd = {}
@@ -97,30 +112,30 @@ frame:SetScript("OnShow", function(frame)
 		end
 	end
 
-	local ignoredGlobal = frame:CreateFontString('CCDGlobalIgnoredString', "ARTWORK", "GameFontNormalSmall")
+	local ignoredGlobal = optionsFrame:CreateFontString('CCDGlobalIgnoredString', "ARTWORK", "GameFontNormalSmall")
 	ignoredGlobal:SetPoint("TOPLEFT", dropdownGlobal, "BOTTOMLEFT", 8, -8)
 	ignoredGlobal:SetText(getGlobalIgnoredString())
 	ignoredGlobal:SetJustifyH("LEFT")
 
-	frame:SetScript("OnShow", nil)
+	optionsFrame:SetScript("OnShow", nil)
 end)
 
-InterfaceOptions_AddCategory(frame)
+InterfaceOptions_AddCategory(optionsFrame)
 
 
 
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("TRADE_SKILL_SHOW")
-frame:RegisterEvent("TRADE_SKILL_UPDATE")
-frame:RegisterEvent("PLAYER_LOGIN")
-frame:RegisterEvent("BAG_UPDATE_COOLDOWN")
-frame:RegisterEvent("BAG_UPDATE")
-frame:RegisterEvent("BAG_OPEN")
-frame:RegisterEvent("ITEM_TEXT_BEGIN")
-frame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+optionsFrame:RegisterEvent("ADDON_LOADED")
+optionsFrame:RegisterEvent("TRADE_SKILL_SHOW")
+optionsFrame:RegisterEvent("TRADE_SKILL_UPDATE")
+optionsFrame:RegisterEvent("PLAYER_LOGIN")
+optionsFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
+optionsFrame:RegisterEvent("BAG_UPDATE")
+optionsFrame:RegisterEvent("BAG_OPEN")
+optionsFrame:RegisterEvent("ITEM_TEXT_BEGIN")
+optionsFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 
 
-function frame:OnEvent(event, arg1)
+function optionsFrame:OnEvent(event, arg1)
 	if event == "ADDON_LOADED"
 	then
 		init()
@@ -131,6 +146,7 @@ function frame:OnEvent(event, arg1)
 		then
 			refreshItems()
 		end
+		refreshSkills()
 		-- scanItemTooltip()
 	elseif event == 'TRADE_SKILL_SHOW'
 	then
@@ -142,7 +158,7 @@ function frame:OnEvent(event, arg1)
 			printSkills()
 			flag = false
 		else
-			-- refreshSkills()
+			refreshSkills()
 		end
 	elseif event == 'UNIT_INVENTORY_CHANGED'
 	then
@@ -152,7 +168,13 @@ function frame:OnEvent(event, arg1)
 		end
 	end
 end
-frame:SetScript("OnEvent", frame.OnEvent);
+optionsFrame:SetScript("OnEvent", optionsFrame.OnEvent);
+
+local frame = CreateFrame("FRAME")
+frame.name = addonName .. 'Main'
+frame:SetScript("OnUpdate", function(self, elapsed)
+	CraftCooldown_OnUpdate(self, elapsed)
+end);
 
 SLASH_CRAFTCOOLDOWN1 = '/ccd'
 function SlashCmdList.CRAFTCOOLDOWN(msg)
@@ -160,6 +182,7 @@ function SlashCmdList.CRAFTCOOLDOWN(msg)
 	then 
 		if msg == 'demo'
 		then
+			sound()
 			demo()
 		elseif msg == 'tt'
 		then
@@ -181,6 +204,38 @@ function SlashCmdList.CRAFTCOOLDOWN(msg)
 	end
 end
 
+function CraftCooldown_OnUpdate(self, elapsed)
+	delay = elapsed + delay
+	if(delay > 5)
+	then
+		delay = 0
+		CraftCooldown_update()
+	end
+end
+
+function CraftCooldown_update()
+	if cache['config']['onReady']
+	then
+		-- print("Update")
+		for _, entry in pairs(sortHash(getGlobalCooldowns(true)))
+		do
+			skillName = entry['name']
+			readyAt = entry['seconds']
+			seconds = readyAt - time()
+			if seconds < 0 and seconds > -5
+			then
+				-- print(seconds)
+				sound()
+				printSkill(skillName, 0, true)
+			end
+		end
+	end
+end
+
+function sound()
+	PlaySound(12867)
+end
+
 function init()
 	if cache == nil
 	then
@@ -189,6 +244,7 @@ function init()
 			config = {
 				['onLogin'] = true,
 				['onOpen'] = true,
+				['onReady'] = true,
 				['useItemTooltip'] = false,
 			},
 			ignored = {},
@@ -211,6 +267,10 @@ function init()
 	if cache['config']['useItemTooltip'] == nil
 	then
 		cache['config']['useItemTooltip'] = false
+	end
+	if cache['config']['onReady'] == nil
+	then
+		cache['config']['onReady'] = true
 	end
 
 	local name = UnitName("player")
@@ -323,7 +383,7 @@ end
 -- end
 
 function scanItemTooltip()
-	if GameTooltipTextLeft1:GetText() == "Salt Shaker"-- or GameTooltipTextLeft1:GetText() == "Second Wind" or GameTooltipTextLeft1:GetText() == "Elixir of Ogre's Strength"
+	if GameTooltipTextLeft1:GetText() == "Salt Shaker"-- or GameTooltipTextLeft1:GetText() == "Second Wind" -- or GameTooltipTextLeft1:GetText() == "Elixir of Ogre's Strength"
 	then
 		local matrix = {["Sec"] = 1, ["Min"] = 60, ["Hr"] = 3600, ["Day"] = 86400}
 		for i=2, GameTooltip:NumLines()
@@ -392,7 +452,7 @@ function refreshItems()
 			if item ~= nil
 			then
 				local sName, sLink, iRarity, iLevel, iMinLevel, sType, sSubType, iStackCount = GetItemInfo(item);
-				if sName == "Salt Shaker" --or sName == "Second Wind"
+				if sName == "Salt Shaker"-- or sName == "Second Wind"
 				then
 					local startTime, duration, isEnabled = GetContainerItemCooldown(bag, slot);
 					local readyAt = startTime + duration - GetTime() + time()
@@ -434,17 +494,22 @@ function demo()
 	end
 end
 
-function printSkill(skillName, seconds)
+function printSkill(skillName, seconds, noTime)
 	local gradient = getGradient(seconds)
+	local timeStr = format("|r[%s%s|r]", gradient, disp_time(seconds))
+	if noTime 
+	then
+		timeStr = ""
+	end
 	if isCooldownIgnored(skillName) or isGlobalCooldownIgnored(skillName)
 	then
 		return
 	end
 	if seconds < 0
 	then
-		print(format("%s%s%s !READY! |r[%s%s|r]", prefix, gradient, skillName, gradient, disp_time(seconds*-1)))
+		print(format("%s%s%s !READY! %s", prefix, gradient, skillName, timeStr))
 	else
-		print(format("%s%s%s |r[%s%s|r]", prefix, gradient, skillName, gradient, disp_time(seconds)))
+		print(format("%s%s%s %s", prefix, gradient, skillName, timeStr))
 	end
 end
 
@@ -478,6 +543,10 @@ end
 
 
 function disp_time(time)
+	if time < 0
+	then
+		time = time * -1
+	end
 	local days = floor(time/86400)
 	local hours = floor(mod(time, 86400)/3600)
 	local minutes = floor(mod(time,3600)/60)

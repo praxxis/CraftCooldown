@@ -4,5 +4,5 @@
 ## Author: Czupak
 ## SavedVariablesPerCharacter: cache
 ## SavedVariables: globalCache
-## Version: 1.1.1
+## Version: 1.2
 CraftCooldown.lua
