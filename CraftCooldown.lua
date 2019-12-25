@@ -59,10 +59,18 @@ optionsFrame:SetScript("OnShow", function(optionsFrame)
 	-- useItemTooltip:SetPoint("TOPLEFT", includeTimeSinceReady, "BOTTOMLEFT", -15, -8)
 	useItemTooltip:SetPoint("TOPLEFT", printOnReady, "BOTTOMLEFT", 0, -8)
 
+	local resetButton = CreateFrame("Button", "ResetButtonFrame", optionsFrame, "UIPanelButtonTemplate")
+	resetButton:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 0, -8)
+	resetButton:SetScript("OnClick", function()
+		clearCharacterCache()
+	end)
+	resetButton:SetText('Clear character cache')
+	resetButton:SetWidth(150)
+
 	local label = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	label:SetPoint("TOPLEFT", 6, -16)
 	label:SetText('Ignored Cooldowns')
-	label:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 0, -8)
+	label:SetPoint("TOPLEFT", resetButton, "BOTTOMLEFT", 0, -8)
 
 	-- DropDown
 	local dropdown = CreateFrame("Frame", "CCDIgnored", optionsFrame, "UIDropDownMenuTemplate")
@@ -92,7 +100,7 @@ optionsFrame:SetScript("OnShow", function(optionsFrame)
 	local labelGlobal = optionsFrame:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 	labelGlobal:SetPoint("TOPLEFT", 6, -16)
 	labelGlobal:SetText('Ignored Global Cooldowns')
-	labelGlobal:SetPoint("TOPLEFT", useItemTooltip, "BOTTOMLEFT", 200, -8)
+	labelGlobal:SetPoint("TOPLEFT", resetButton, "BOTTOMLEFT", 200, -8)
 
 	local dropdownGlobal = CreateFrame("Frame", "CCDGlobalIgnored", optionsFrame, "UIDropDownMenuTemplate")
 	dropdownGlobal:SetPoint("TOPLEFT", labelGlobal, "BOTTOMLEFT", 0, -8)
@@ -422,7 +430,7 @@ function refreshSkills()
 	do
 		skillName, skillType, numAvailable, isExpanded, altVerb, numSkillUps = GetTradeSkillInfo(a);
 		seconds,y = GetTradeSkillCooldown(a);
-		if seconds and seconds > 0
+		if seconds and seconds > 10
 		then
 			-- cooldown = seconds / 60 / 60
 			-- cache['crafts'][skillName] = time() + seconds
@@ -434,13 +442,6 @@ function refreshSkills()
 		end
 	end
 	return skills
-end
-
-function cacheCooldown(cooldown, readyAt)
-	cache['crafts'][cooldown] = readyAt
-	local name = UnitName("player")
-	local realm = GetRealmName("player")
-	globalCache['crafts'][realm][name][cooldown] = readyAt
 end
 
 function refreshItems()
@@ -468,29 +469,45 @@ function refreshItems()
 	end
 end
 
+function getGlobalCooldowns(includeCurrentCharacter)
+	local cName = UnitName("player")
+	local cRealm = GetRealmName("player")
+	local data = {}
+	for realm, realms in pairs(globalCache['crafts'])
+	do
+		for char, chars in pairs(realms)
+		do
+			for cooldown, seconds in pairs(chars)
+			do
+				if not (cName == char and cRealm == realm and not includeCurrentCharacter)
+				then
+					data[ format("(%s-%s) %s", char, realm, cooldown) ] = seconds
+				end
+			end
+		end
+	end
+	return data
+end
+
+function cacheCooldown(cooldown, readyAt)
+	cache['crafts'][cooldown] = readyAt
+	local name = UnitName("player")
+	local realm = GetRealmName("player")
+	globalCache['crafts'][realm][name][cooldown] = readyAt
+end
+
+function clearCharacterCache()
+	cache['crafts'] = {}
+	local name = UnitName("player")
+	local realm = GetRealmName("player")
+	globalCache['crafts'][realm][name] = {}
+	print(format("%s%s%s", prefix, "|cffff00ff", "Character cache cleared!"))
+end
+
 function printSkills()
 	for _, row in pairs(refreshSkills())
 	do
 		printSkill(row[1], row[2])
-	end
-end
-
-function demo()
-	local matrix = {
-		{ 0, "READY"}, -- READY
-		{ 1 * 60 * 60, "0-1h"},
-		{ 2 * 60 * 60, "1-2h"},
-		{ 4 * 60 * 60, "2-4h"},
-		{ 8 * 60 * 60, "4-8h"},
-		{ 12 * 60 * 60, "8-12h"},
-		{ 24 * 60 * 60, "12-24h"},
-		{ 48 * 60 * 60, "24-48h"},
-		{ 99 * 60 * 60, "48h+"}
-	}
-	for _, row in pairs(matrix)
-	do
-		local t, s = row[1], row[2]
-		printSkill(s, t-60)
 	end
 end
 
@@ -510,6 +527,24 @@ function printSkill(skillName, seconds, noTime)
 		print(format("%s%s%s !READY! %s", prefix, gradient, skillName, timeStr))
 	else
 		print(format("%s%s%s %s", prefix, gradient, skillName, timeStr))
+	end
+end
+
+function printCached()
+	for _, entry in pairs(sortHash(cache['crafts']))
+	do
+		skillName = entry['name']
+		seconds = entry['seconds']
+		readyAt = seconds - time()
+		printSkill(skillName, readyAt)
+	end
+
+	for _, entry in pairs(sortHash(getGlobalCooldowns()))
+	do
+		skillName = entry['name']
+		seconds = entry['seconds']
+		readyAt = seconds - time()
+		printSkill(skillName, readyAt)
 	end
 end
 
@@ -554,42 +589,23 @@ function disp_time(time)
 	return format("%dd %dh %dm %ds",days,hours,minutes,seconds)
 end
 
-function printCached()
-	for _, entry in pairs(sortHash(cache['crafts']))
+function demo()
+	local matrix = {
+		{ 0, "READY"}, -- READY
+		{ 1 * 60 * 60, "0-1h"},
+		{ 2 * 60 * 60, "1-2h"},
+		{ 4 * 60 * 60, "2-4h"},
+		{ 8 * 60 * 60, "4-8h"},
+		{ 12 * 60 * 60, "8-12h"},
+		{ 24 * 60 * 60, "12-24h"},
+		{ 48 * 60 * 60, "24-48h"},
+		{ 99 * 60 * 60, "48h+"}
+	}
+	for _, row in pairs(matrix)
 	do
-		skillName = entry['name']
-		seconds = entry['seconds']
-		readyAt = seconds - time()
-		printSkill(skillName, readyAt)
+		local t, s = row[1], row[2]
+		printSkill(s, t-60)
 	end
-
-	for _, entry in pairs(sortHash(getGlobalCooldowns()))
-	do
-		skillName = entry['name']
-		seconds = entry['seconds']
-		readyAt = seconds - time()
-		printSkill(skillName, readyAt)
-	end
-end
-
-function getGlobalCooldowns(includeCurrentCharacter)
-	local cName = UnitName("player")
-	local cRealm = GetRealmName("player")
-	local data = {}
-	for realm, realms in pairs(globalCache['crafts'])
-	do
-		for char, chars in pairs(realms)
-		do
-			for cooldown, seconds in pairs(chars)
-			do
-				if not (cName == char and cRealm == realm and not includeCurrentCharacter)
-				then
-					data[ format("(%s-%s) %s", char, realm, cooldown) ] = seconds
-				end
-			end
-		end
-	end
-	return data
 end
 
 function sortHash(hash)
