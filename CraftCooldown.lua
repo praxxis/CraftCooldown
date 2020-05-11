@@ -139,12 +139,13 @@ optionsFrame:RegisterEvent("PLAYER_LOGIN")
 optionsFrame:RegisterEvent("BAG_UPDATE_COOLDOWN")
 optionsFrame:RegisterEvent("BAG_UPDATE")
 optionsFrame:RegisterEvent("BAG_OPEN")
-optionsFrame:RegisterEvent("ITEM_TEXT_BEGIN")
 optionsFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+optionsFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
-
-function optionsFrame:OnEvent(event, arg1)
-	if event == "ADDON_LOADED"
+function optionsFrame:OnEvent(event, ...)
+	local arg1, arg2 = ...	
+	
+	if event == "ADDON_LOADED" and arg1 == addonName
 	then
 		init()
 	elseif event == 'BAG_UPDATE' or event == 'BAG_UPDATE_COOLDOWN' or event == 'BAG_OPEN'
@@ -174,6 +175,14 @@ function optionsFrame:OnEvent(event, arg1)
 		then
 			scanItemTooltip()
 		end
+	elseif event == "PLAYER_ENTERING_WORLD"
+	then
+	  if arg1 or arg2 then
+		if cache['config']['onLogin']
+		then
+			printCached()
+		end
+	  end
 	end
 end
 optionsFrame:SetScript("OnEvent", optionsFrame.OnEvent);
@@ -302,10 +311,6 @@ function init()
 	end
 
 	-- checkVersion()
-	if cache['config']['onLogin']
-	then
-		printCached()
-	end
 end
 
 function toggleIgnoreCooldown(cooldown)
