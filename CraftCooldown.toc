@@ -1,4 +1,6 @@
-## Interface: 11303
+## Interface: 11306
+## Interface-Classic: 11306
+## Interface-BCC: 20501
 ## Title: CraftCooldown
 ## Notes: TradeSkills Cooldown Tracker
 ## Author: Czupak
